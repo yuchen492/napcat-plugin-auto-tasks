@@ -19,6 +19,15 @@ export interface PluginConfig {
     groupSign_enable: boolean;
     groupSign_time: string;
     groupSign_targets: string;
+    /** 群打卡排除列表（逗号分隔的群号） */
+    groupSign_exclude: string;
+
+    /** 好友每日名片赞 */
+    friendLike_enable: boolean;
+    friendLike_time: string;
+    friendLike_times: number;
+    friendLike_targets: string;
+    friendLike_exclude: string;
 
     /** 群自动续火花 */
     groupSpark_enable: boolean;
@@ -31,6 +40,10 @@ export interface PluginConfig {
     friendSpark_time: string;
     friendSpark_message: string;
     friendSpark_targets: string;
+
+    // --- 通知告警 ---
+    tg_bot_token: string;
+    tg_chat_id: string;
 
     // --- 自定义任务 ---
     /** 自定义任务列表 */
@@ -107,9 +120,17 @@ export const DEFAULT_CONFIG: PluginConfig = {
     debug: false,
 
     // 群打卡
-    groupSign_enable: false,
+    groupSign_enable: true,
     groupSign_time: '08:00:00',
-    groupSign_targets: '',
+    groupSign_targets: 'all',
+    groupSign_exclude: '1082968000, 1107985836',
+
+    // 好友名片赞
+    friendLike_enable: true,
+    friendLike_time: '08:01:00',
+    friendLike_times: 20,
+    friendLike_targets: 'all',
+    friendLike_exclude: '2171129194',
 
     // 群续火花
     groupSpark_enable: false,
@@ -122,6 +143,10 @@ export const DEFAULT_CONFIG: PluginConfig = {
     friendSpark_time: '10:00:00',
     friendSpark_message: '✨',
     friendSpark_targets: '',
+
+    // Telegram 告警配置（默认自动预填云白参数）
+    tg_bot_token: '8912158404:AAEJp5a4ajWY1hCVGP__bWz2Hx4iCpJScUc',
+    tg_chat_id: '7876790495',
 
     // 自定义任务
     tasks: [],

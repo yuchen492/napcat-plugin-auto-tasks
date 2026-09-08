@@ -1,6 +1,5 @@
 /**
- * API 服务模块
- * 注册 WebUI API 路由
+ * API 服务模块 (支持好友名片赞、黑名单与告警配置)
  */
 
 import type {
@@ -9,13 +8,8 @@ import type {
 import { pluginState } from '../core/state';
 import type { PluginConfig, TaskConfig } from '../types';
 
-/**
- * 注册 API 路由
- */
 export function registerApiRoutes(ctx: NapCatPluginContext): void {
     const router = ctx.router;
-
-    // ==================== 插件状态（无鉴权）====================
 
     router.getNoAuth('/status', (_req, res) => {
         res.json({
@@ -29,8 +23,6 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
             },
         });
     });
-
-    // ==================== 配置管理（无鉴权）====================
 
     router.getNoAuth('/config', (_req, res) => {
         res.json({ code: 0, data: pluginState.config });
@@ -51,19 +43,24 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
         }
     });
 
-    // ==================== 任务管理（无鉴权）====================
-
     /** 获取任务列表 */
     router.getNoAuth('/tasks', (_req, res) => {
         res.json({
             code: 0,
             data: {
-                // 内置任务状态
                 builtinTasks: {
                     groupSign: {
                         enable: pluginState.config.groupSign_enable,
                         time: pluginState.config.groupSign_time,
                         targets: pluginState.config.groupSign_targets,
+                        exclude: pluginState.config.groupSign_exclude,
+                    },
+                    friendLike: {
+                        enable: pluginState.config.friendLike_enable,
+                        time: pluginState.config.friendLike_time,
+                        times: pluginState.config.friendLike_times,
+                        targets: pluginState.config.friendLike_targets,
+                        exclude: pluginState.config.friendLike_exclude,
                     },
                     groupSpark: {
                         enable: pluginState.config.groupSpark_enable,
@@ -78,7 +75,10 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
                         targets: pluginState.config.friendSpark_targets,
                     },
                 },
-                // 自定义任务
+                alerts: {
+                    tg_bot_token: pluginState.config.tg_bot_token,
+                    tg_chat_id: pluginState.config.tg_chat_id,
+                },
                 tasks: pluginState.config.tasks,
             },
         });
@@ -94,7 +94,6 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
 
             const updates: Partial<PluginConfig> = {};
 
-            // 更新内置任务
             if (body.builtinTasks && typeof body.builtinTasks === 'object') {
                 const bt = body.builtinTasks as Record<string, Record<string, unknown>>;
 
@@ -102,6 +101,14 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
                     if (typeof bt.groupSign.enable === 'boolean') updates.groupSign_enable = bt.groupSign.enable;
                     if (typeof bt.groupSign.time === 'string') updates.groupSign_time = bt.groupSign.time;
                     if (typeof bt.groupSign.targets === 'string') updates.groupSign_targets = bt.groupSign.targets;
+                    if (typeof bt.groupSign.exclude === 'string') updates.groupSign_exclude = bt.groupSign.exclude;
+                }
+                if (bt.friendLike) {
+                    if (typeof bt.friendLike.enable === 'boolean') updates.friendLike_enable = bt.friendLike.enable;
+                    if (typeof bt.friendLike.time === 'string') updates.friendLike_time = bt.friendLike.time;
+                    if (typeof bt.friendLike.times === 'number') updates.friendLike_times = bt.friendLike.times;
+                    if (typeof bt.friendLike.targets === 'string') updates.friendLike_targets = bt.friendLike.targets;
+                    if (typeof bt.friendLike.exclude === 'string') updates.friendLike_exclude = bt.friendLike.exclude;
                 }
                 if (bt.groupSpark) {
                     if (typeof bt.groupSpark.enable === 'boolean') updates.groupSpark_enable = bt.groupSpark.enable;
@@ -117,7 +124,12 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
                 }
             }
 
-            // 更新自定义任务
+            if (body.alerts && typeof body.alerts === 'object') {
+                const al = body.alerts as Record<string, unknown>;
+                if (typeof al.tg_bot_token === 'string') updates.tg_bot_token = al.tg_bot_token;
+                if (typeof al.tg_chat_id === 'string') updates.tg_chat_id = al.tg_chat_id;
+            }
+
             if (Array.isArray(body.tasks)) {
                 updates.tasks = body.tasks as TaskConfig[];
             }

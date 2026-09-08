@@ -1,50 +1,99 @@
-# NapCat Auto Tasks 插件
+# NapCat Auto Tasks 增强版 (napcat-plugin-auto-tasks)
 
-基于 **NapCat** 框架的高性能自动化任务管理插件，旨在为 QQ 机器人提供稳定、灵活的定时和循环任务支持。
+> **本项目由 云白 (YunBai) 需求设计，全量核心功能代码与 WebUI 由 AI 模型 `yunbai/gemini-3.8-flash-high` 独立自主编写与重构开发。**
+> 基于原版 [ChaceQC/napcat-plugin-auto-tasks](https://github.com/ChaceQC/napcat-plugin-auto-tasks) 进行二次开发与深度增强。
 
-## 🌟 核心功能
+基于 **NapCat** 框架的高性能自动化任务管理插件，旨在为 QQ 机器人提供稳定、灵活的定时打卡、好友名片赞、续火花及 Telegram 异常即时告警。
 
-* **多维度内置任务**：
-    * **群自动打卡**：支持多群组定时签到。
-    * **自动续火花**：支持好友和群组的互动维护，确保火花不熄灭。
-* **动态自定义任务**：
-    * **灵活槽位**：通过 UI 动态调整任务数量，自动生成配置界面。
-    * **双触发模式**：支持“每日定时（HH:mm:ss）”或“固定间隔（秒）”循环执行。
-* **智能任务管理**：
-    * **强效清理**：采用全局定时器注册机制，解决插件重载时任务无法停止的残留进程问题。
-    * **CQ 码兼容**：所有任务消息均支持标准 CQ 码，可发送图片、表情、At 等。
+---
 
-## 📦 安装与构建
+## 🌟 增强版新增特性 (Changelog vs 原版)
 
-1.  **准备环境**：确保已安装 Node.js 和 npm。
-2.  **获取代码并打包**：
-    ```bash
-    npm install
-    npm run build
-    ```
-3.  **部署**：
-    * 将生成的 `dist/index.mjs` 和 `package.json` 拷贝到 NapCat 的 `plugins/auto-tasks/` 目录下。
-4.  **运行**：重启 NapCat 即可加载插件。
+对比官方/原始项目，本项目增加了以下实用且高频的生产环境功能：
+
+1. **👍 好友名片自动点赞 (`friendLike`)**：
+   * 支持每日定时对全量好友（或指定好友）批量执行名片赞。
+   * 支持自定义每日点赞次数（默认 20 次，拉满 SVIP 上限）。
+   * **自动过滤排除列表**：支持配置排除 QQ 号（如自动跳过机器人自身或特定账号）。
+   * **内置防风控延时**：点赞好友之间引入 500ms 动态延时，避免瞬时并发触发腾讯接口限频/风控。
+
+2. **🚫 群打卡黑名单 / 排除列表 (`groupSign_exclude`)**：
+   * 原版仅支持指定个别群或 `all` 全部群，无法避开特定敏感群。
+   * 增强版支持设定群黑名单（逗号分隔），在选择 `all` 全群打卡时自动剔除黑名单群组，防止误触发。
+
+3. **🚨 Telegram 异常即时告警推送 (`tg_bot_token` & `tg_chat_id`)**：
+   * 支持配置 Telegram Bot Token 与 Chat ID。
+   * 当群打卡失败、好友点赞触发风控或底层接口异常时，通过 Telegram 机器人第一时间向管理员推送告警消息。
+
+4. **🖥️ WebUI 全量可视化配置与监控**：
+   * 重构了内置的 React 单页管理面板（TasksPage 与 StatusPage）。
+   * 新增了好友名片赞配置卡片、群排除名单输入框、Telegram 告警配置面板。
+   * 状态监控页展示今日执行指标与运行日志。
+
+---
+
+## 📋 原版基础功能
+
+* **群自动打卡**：支持配置触发时间与目标群聊。
+* **群/好友自动续火花**：支持自定义定时发送互动消息/表情。
+* **自定义动态任务槽位**：支持“每日定时（HH:mm:ss）”或“固定间隔（秒）”循环执行任意消息或 CQ 码。
+* **全局定时器清理**：插件热重载时自动注销清理旧定时器，杜绝内存泄漏与任务重复。
+
+---
+
+## 📦 安装与部署
+
+### 方式 A：直接导入预编译包（推荐）
+1. 从 Releases 下载 `napcat-plugin-auto-tasks.zip`。
+2. 打开 NapCat WebUI 管理后台 -> **插件管理** -> **导入插件** -> 选择上传 zip 包。
+3. 导入后启用插件即可在 **扩展页面** 中查看与配置。
+
+### 方式 B：源码自行构建
+1. 确保已安装 Node.js (>= 18) 与 npm。
+2. 克隆仓库并安装依赖：
+   ```bash
+   git clone <你的仓库URL>
+   cd napcat-plugin-auto-tasks
+   npm install
+   ```
+3. 构建完整前后端产物：
+   ```bash
+   # 构建前端 WebUI
+   npm run build:webui
+   # 构建后端及打包
+   npm run build
+   ```
+4. 将 `dist/` 目录下的产物及 `package.json` 放置在 NapCat 的 `plugins/napcat-plugin-auto-tasks/` 目录下即可。
+
+---
 
 ## 🛠️ 配置说明
 
-您可以通过 NapCat 提供的图形化界面直接配置：
+所有配置均可在 NapCat 扩展界面可视化设置，也可直接编辑配置文件 `config/plugins/napcat-plugin-auto-tasks/config.json`：
 
-| 配置项 | 说明 | 示例 |
-| :--- | :--- | :--- |
-| **当前任务数量** | 控制显示的自定义任务槽位个数 | `5` |
-| **执行时间** | 每日固定触发的时间点 | `08:00:00` |
-| **循环间隔** | 每隔多少秒执行一次（优先级高于定时） | `3600` |
-| **目标号码** | 群号或 QQ 号 | `12345678` |
-| **消息内容** | 支持纯文本及 CQ 码 | `[CQ:face,id=14] 早上好！` |
+```json
+{
+  "enabled": true,
+  "debug": false,
+  "groupSign_enable": true,
+  "groupSign_time": "08:00:00",
+  "groupSign_targets": "all",
+  "groupSign_exclude": "1082968000, 1107985836",
+  "friendLike_enable": true,
+  "friendLike_time": "08:01:00",
+  "friendLike_times": 20,
+  "friendLike_targets": "all",
+  "friendLike_exclude": "2171129194",
+  "tg_bot_token": "",
+  "tg_chat_id": ""
+}
+```
 
-## 📂 项目结构
+---
 
-* `src/index.ts`: 插件入口，管理生命周期与 UI 构建。
-* `src/taskManager.ts`: 核心引擎，负责定时器调度与进程回收。
-* `src/config.ts`: 配置文件处理与动态 UI 渲染逻辑。
-* `src/types.ts`: 接口定义与默认配置。
+## 🤖 鸣谢与声明
 
-## 📝 许可证
-
-本项目基于 MIT 协议开源。
+* 原始项目：[ChaceQC/napcat-plugin-auto-tasks](https://github.com/ChaceQC/napcat-plugin-auto-tasks)
+* 架构设计与产品需求：**云白 (YunBai)**
+* 核心代码重构与全量开发：**塔菲 (OpenClaw Agent / 模型: `yunbai/gemini-3.8-flash-high`)**
+* 许可证：[MIT License](LICENSE)

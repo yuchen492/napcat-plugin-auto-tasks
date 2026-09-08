@@ -23,7 +23,8 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
     ]
 
     const builtinStatus = [
-        { name: '群自动打卡', enabled: status.config.groupSign_enable, time: status.config.groupSign_time },
+        { name: 'QQ 群每日打卡', enabled: status.config.groupSign_enable, time: status.config.groupSign_time },
+        { name: 'QQ 好友每日名片赞', enabled: status.config.friendLike_enable, time: status.config.friendLike_time },
         { name: '群自动续火花', enabled: status.config.groupSpark_enable, time: status.config.groupSpark_time },
         { name: '好友自动续火花', enabled: status.config.friendSpark_enable, time: status.config.friendSpark_time },
     ]
@@ -36,7 +37,7 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
                     <div key={i} className="bg-white dark:bg-[#25262B] rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow">
                         <div className="flex items-center justify-between mb-3">
                             <span className="text-2xl">{card.icon}</span>
-                            <button onClick={onRefresh} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                            <button onClick={onRefresh} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer">
                                 <IconRefresh size={14} />
                             </button>
                         </div>
@@ -49,7 +50,7 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
             {/* 内置任务状态 */}
             <div className="bg-white dark:bg-[#25262B] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
                 <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">内置任务</h2>
+                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">内置核心任务状态</h2>
                 </div>
                 <div className="divide-y divide-gray-100 dark:divide-gray-800">
                     {builtinStatus.map((task, i) => (
@@ -76,7 +77,7 @@ export default function StatusPage({ status, onRefresh }: StatusPageProps) {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                         <span className="text-gray-500 dark:text-gray-400">插件名称</span>
-                        <div className="font-medium text-gray-800 dark:text-gray-200 mt-0.5">{status.pluginName}</div>
+                        <div className="font-medium text-gray-800 dark:text-gray-200 mt-0.5">{status.pluginName} (云白专属增强版)</div>
                     </div>
                     <div>
                         <span className="text-gray-500 dark:text-gray-400">全局开关</span>

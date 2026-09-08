@@ -18,6 +18,12 @@ export interface PluginConfig {
     groupSign_enable: boolean
     groupSign_time: string
     groupSign_targets: string
+    groupSign_exclude: string
+    friendLike_enable: boolean
+    friendLike_time: string
+    friendLike_times: number
+    friendLike_targets: string
+    friendLike_exclude: string
     groupSpark_enable: boolean
     groupSpark_time: string
     groupSpark_message: string
@@ -26,6 +32,8 @@ export interface PluginConfig {
     friendSpark_time: string
     friendSpark_message: string
     friendSpark_targets: string
+    tg_bot_token: string
+    tg_chat_id: string
     tasks: TaskConfig[]
     groupConfigs?: Record<string, GroupConfig>
 }
@@ -47,6 +55,14 @@ export interface BuiltinTasks {
         enable: boolean
         time: string
         targets: string
+        exclude: string
+    }
+    friendLike: {
+        enable: boolean
+        time: string
+        times: number
+        targets: string
+        exclude: string
     }
     groupSpark: {
         enable: boolean

@@ -6,6 +6,10 @@ import type { TaskConfig, BuiltinTasks } from '../types'
 
 interface TasksData {
     builtinTasks: BuiltinTasks
+    alerts?: {
+        tg_bot_token?: string
+        tg_chat_id?: string
+    }
     tasks: TaskConfig[]
 }
 
@@ -23,9 +27,14 @@ const emptyTask: TaskConfig = {
 
 export default function TasksPage() {
     const [builtin, setBuiltin] = useState<BuiltinTasks>({
-        groupSign: { enable: false, time: '08:00:00', targets: '' },
+        groupSign: { enable: true, time: '08:00:00', targets: 'all', exclude: '1082968000, 1107985836' },
+        friendLike: { enable: true, time: '08:01:00', times: 20, targets: 'all', exclude: '2171129194' },
         groupSpark: { enable: false, time: '09:00:00', message: '自动续火花', targets: '' },
         friendSpark: { enable: false, time: '10:00:00', message: '✨', targets: '' },
+    })
+    const [alerts, setAlerts] = useState<{ tg_bot_token: string; tg_chat_id: string }>({
+        tg_bot_token: '',
+        tg_chat_id: '7876790495',
     })
     const [tasks, setTasks] = useState<TaskConfig[]>([])
     const [saving, setSaving] = useState(false)
@@ -34,8 +43,12 @@ export default function TasksPage() {
         try {
             const res = await noAuthFetch<TasksData>('/tasks')
             if (res.code === 0 && res.data) {
-                setBuiltin(res.data.builtinTasks)
-                setTasks(res.data.tasks)
+                if (res.data.builtinTasks) setBuiltin(res.data.builtinTasks)
+                if (res.data.alerts) setAlerts({
+                    tg_bot_token: res.data.alerts.tg_bot_token || '',
+                    tg_chat_id: res.data.alerts.tg_chat_id || '7876790495',
+                })
+                if (res.data.tasks) setTasks(res.data.tasks)
             }
         } catch (e) {
             showToast('加载任务失败', 'error')
@@ -49,10 +62,10 @@ export default function TasksPage() {
         try {
             const res = await noAuthFetch('/tasks', {
                 method: 'POST',
-                body: JSON.stringify({ builtinTasks: builtin, tasks }),
+                body: JSON.stringify({ builtinTasks: builtin, alerts, tasks }),
             })
             if (res.code === 0) {
-                showToast('保存成功，任务已重启', 'success')
+                showToast('保存成功，任务已生效并重启！', 'success')
             } else {
                 showToast(res.message || '保存失败', 'error')
             }
@@ -76,27 +89,41 @@ export default function TasksPage() {
                 <button
                     onClick={saveTasks}
                     disabled={saving}
-                    className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium shadow-sm transition-all"
+                    className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium shadow-sm transition-all cursor-pointer"
                 >
                     {saving ? '保存中...' : '💾 保存配置'}
                 </button>
             </div>
 
-            {/* 内置任务 */}
+            {/* 内置核心任务 */}
             <div className="bg-white dark:bg-[#25262B] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
                 <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">📅 内置任务</h2>
+                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">📅 内置核心任务 (云白专属增强版)</h2>
                 </div>
                 <div className="p-6 space-y-6">
                     {/* 群打卡 */}
                     <BuiltinTaskCard
-                        title="群自动打卡"
+                        title="QQ 群每日打卡"
                         emoji="📅"
                         enable={builtin.groupSign.enable}
                         onToggle={(v) => setBuiltin({ ...builtin, groupSign: { ...builtin.groupSign, enable: v } })}
                     >
-                        <InputField label="执行时间" value={builtin.groupSign.time} onChange={(v) => setBuiltin({ ...builtin, groupSign: { ...builtin.groupSign, time: v } })} placeholder="HH:mm:ss" />
-                        <InputField label="群号列表" value={builtin.groupSign.targets} onChange={(v) => setBuiltin({ ...builtin, groupSign: { ...builtin.groupSign, targets: v } })} placeholder="逗号分隔，或 all 或 allAllow" />
+                        <InputField label="执行时间" value={builtin.groupSign.time} onChange={(v) => setBuiltin({ ...builtin, groupSign: { ...builtin.groupSign, time: v } })} placeholder="08:00:00" />
+                        <InputField label="打卡目标群" value={builtin.groupSign.targets} onChange={(v) => setBuiltin({ ...builtin, groupSign: { ...builtin.groupSign, targets: v } })} placeholder="all 或逗号分隔群号" />
+                        <InputField label="黑名单/排除群" value={builtin.groupSign.exclude || ''} onChange={(v) => setBuiltin({ ...builtin, groupSign: { ...builtin.groupSign, exclude: v } })} placeholder="要排除的群号(逗号分隔)" />
+                    </BuiltinTaskCard>
+
+                    {/* 好友名片赞 */}
+                    <BuiltinTaskCard
+                        title="QQ 好友每日名片赞"
+                        emoji="👍"
+                        enable={builtin.friendLike.enable}
+                        onToggle={(v) => setBuiltin({ ...builtin, friendLike: { ...builtin.friendLike, enable: v } })}
+                    >
+                        <InputField label="执行时间" value={builtin.friendLike.time} onChange={(v) => setBuiltin({ ...builtin, friendLike: { ...builtin.friendLike, time: v } })} placeholder="08:01:00" />
+                        <InputField label="每人点赞次数" value={String(builtin.friendLike.times || 20)} onChange={(v) => setBuiltin({ ...builtin, friendLike: { ...builtin.friendLike, times: parseInt(v) || 20 } })} placeholder="20" />
+                        <InputField label="点赞目标好友" value={builtin.friendLike.targets} onChange={(v) => setBuiltin({ ...builtin, friendLike: { ...builtin.friendLike, targets: v } })} placeholder="all 或指定QQ号" />
+                        <InputField label="排除QQ列表" value={builtin.friendLike.exclude || ''} onChange={(v) => setBuiltin({ ...builtin, friendLike: { ...builtin.friendLike, exclude: v } })} placeholder="自身QQ等(逗号分隔)" />
                     </BuiltinTaskCard>
 
                     {/* 群续火花 */}
@@ -125,13 +152,24 @@ export default function TasksPage() {
                 </div>
             </div>
 
+            {/* Telegram 告警配置 */}
+            <div className="bg-white dark:bg-[#25262B] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
+                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">📢 告警通知设置 (Telegram)</h2>
+                </div>
+                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <InputField label="Telegram Bot Token" value={alerts.tg_bot_token} onChange={(v) => setAlerts({ ...alerts, tg_bot_token: v })} placeholder="可留空使用默认预设" />
+                    <InputField label="Telegram Chat ID" value={alerts.tg_chat_id} onChange={(v) => setAlerts({ ...alerts, tg_chat_id: v })} placeholder="默认接收告警的 Chat ID" />
+                </div>
+            </div>
+
             {/* 自定义任务 */}
             <div className="bg-white dark:bg-[#25262B] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
                 <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">🤖 自定义任务</h2>
                     <button
                         onClick={addTask}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-lg text-sm font-medium hover:bg-brand-100 dark:hover:bg-brand-500/20 transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 rounded-lg text-sm font-medium hover:bg-brand-100 dark:hover:bg-brand-500/20 transition-colors cursor-pointer"
                     >
                         <IconPlus size={14} />
                         添加任务
@@ -192,7 +230,7 @@ function CustomTaskCard({ index, task, onUpdate, onRemove }: {
                         {{ group: '群消息', private: '私聊', group_notice: '群公告' }[task.type]}
                     </span>
                 </div>
-                <button onClick={onRemove} className="text-red-400 hover:text-red-600 transition-colors p-1">
+                <button onClick={onRemove} className="text-red-400 hover:text-red-600 transition-colors p-1 cursor-pointer">
                     <IconTrash size={16} />
                 </button>
             </div>
