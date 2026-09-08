@@ -42,6 +42,7 @@ export interface PluginConfig {
     friendSpark_targets: string;
 
     // --- 通知告警 ---
+    tg_enable: boolean;
     tg_bot_token: string;
     tg_chat_id: string;
 
@@ -145,7 +146,8 @@ export const DEFAULT_CONFIG: PluginConfig = {
     friendSpark_targets: '',
 
     // Telegram 告警配置（默认自动预填云白参数）
-    tg_bot_token: '8912158404:AAEJp5a4ajWY1hCVGP__bWz2Hx4iCpJScUc',
+    tg_enable: true,
+    tg_bot_token: '8337857734:AAFStaGikl_ee4ecD270VOJtCsDoKOIOVMw',
     tg_chat_id: '7876790495',
 
     // 自定义任务

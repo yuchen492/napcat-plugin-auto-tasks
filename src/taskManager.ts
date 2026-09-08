@@ -15,8 +15,8 @@ import { pluginState } from './core/state';
 import type { TaskConfig, GroupInfo, FriendInfo } from './types';
 
 // Telegram 异步告警推送
-async function sendTelegramAlert(botToken: string, chatId: string, text: string): Promise<void> {
-    if (!botToken || !chatId) return;
+export async function sendTelegramAlert(botToken: string, chatId: string, text: string): Promise<{ success: boolean; error?: string }> {
+    if (!botToken || !chatId) return { success: false, error: '缺少 Bot Token 或 Chat ID' };
     return new Promise((resolve) => {
         try {
             const data = JSON.stringify({
@@ -35,22 +35,34 @@ async function sendTelegramAlert(botToken: string, chatId: string, text: string)
                 },
                 timeout: 8000,
             }, (res) => {
-                res.on('data', () => {});
-                res.on('end', () => resolve());
+                let resData = '';
+                res.on('data', (d) => { resData += d; });
+                res.on('end', () => {
+                    try {
+                        const parsed = JSON.parse(resData);
+                        if (parsed.ok) {
+                            resolve({ success: true });
+                        } else {
+                            resolve({ success: false, error: parsed.description || 'Telegram API 报错' });
+                        }
+                    } catch {
+                        resolve({ success: res.statusCode === 200 });
+                    }
+                });
             });
             req.on('error', (err) => {
                 pluginState.logger.error('Telegram 推送失败:', err);
-                resolve();
+                resolve({ success: false, error: String(err) });
             });
             req.on('timeout', () => {
                 req.destroy();
-                resolve();
+                resolve({ success: false, error: '连接超时' });
             });
             req.write(data);
             req.end();
         } catch (e) {
             pluginState.logger.error('Telegram 推送异常:', e);
-            resolve();
+            resolve({ success: false, error: String(e) });
         }
     });
 }
@@ -254,8 +266,8 @@ export class TaskManager {
 
         pluginState.logger.info(`[群打卡完成] 成功: ${successCount}, 失败: ${failCount}`);
 
-        // 仅在有失败时通过 Telegram 告警
-        if (failCount > 0 && tgBotToken && tgChatId) {
+        // 仅在有失败且开启通知时通过 Telegram 告警
+        if (failCount > 0 && pluginState.config.tg_enable && tgBotToken && tgChatId) {
             const alertMsg = `⚠️ *[NapCat 自动任务] QQ群每日打卡异常告警*\n\n` +
                 `*执行时间:* ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}\n` +
                 `*成功数量:* ${successCount} 个群\n` +
@@ -295,7 +307,7 @@ export class TaskManager {
 
         pluginState.logger.info(`[好友名片赞完成] 成功好友: ${successCount}, 失败: ${failCount}, 累计点赞: ${totalLikes} 次`);
 
-        if (failCount > 0 && tgBotToken && tgChatId) {
+        if (failCount > 0 && pluginState.config.tg_enable && tgBotToken && tgChatId) {
             const alertMsg = `⚠️ *[NapCat 自动任务] QQ好友名片点赞异常告警*\n\n` +
                 `*执行时间:* ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}\n` +
                 `*成功人数:* ${successCount} 位好友 (${totalLikes} 次赞)\n` +

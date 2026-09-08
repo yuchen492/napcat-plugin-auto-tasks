@@ -7,6 +7,7 @@ import type { TaskConfig, BuiltinTasks } from '../types'
 interface TasksData {
     builtinTasks: BuiltinTasks
     alerts?: {
+        tg_enable?: boolean
         tg_bot_token?: string
         tg_chat_id?: string
     }
@@ -32,12 +33,14 @@ export default function TasksPage() {
         groupSpark: { enable: false, time: '09:00:00', message: '自动续火花', targets: '' },
         friendSpark: { enable: false, time: '10:00:00', message: '✨', targets: '' },
     })
-    const [alerts, setAlerts] = useState<{ tg_bot_token: string; tg_chat_id: string }>({
+    const [alerts, setAlerts] = useState<{ tg_enable: boolean; tg_bot_token: string; tg_chat_id: string }>({
+        tg_enable: true,
         tg_bot_token: '',
         tg_chat_id: '7876790495',
     })
     const [tasks, setTasks] = useState<TaskConfig[]>([])
     const [saving, setSaving] = useState(false)
+    const [testingTg, setTestingTg] = useState(false)
 
     const fetchTasks = useCallback(async () => {
         try {
@@ -45,6 +48,7 @@ export default function TasksPage() {
             if (res.code === 0 && res.data) {
                 if (res.data.builtinTasks) setBuiltin(res.data.builtinTasks)
                 if (res.data.alerts) setAlerts({
+                    tg_enable: res.data.alerts.tg_enable !== false,
                     tg_bot_token: res.data.alerts.tg_bot_token || '',
                     tg_chat_id: res.data.alerts.tg_chat_id || '7876790495',
                 })
@@ -153,14 +157,58 @@ export default function TasksPage() {
             </div>
 
             {/* Telegram 告警配置 */}
-            <div className="bg-white dark:bg-[#25262B] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
-                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">📢 告警通知设置 (Telegram)</h2>
+            <div className={`bg-white dark:bg-[#25262B] rounded-xl shadow-sm border transition-all ${alerts.tg_enable ? 'border-brand-200 dark:border-brand-500/30' : 'border-gray-100 dark:border-gray-800'}`}>
+                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <span className="text-lg">📢</span>
+                        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Telegram 异常通知推送</h2>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-400">{alerts.tg_enable ? '已启用' : '已关闭'}</span>
+                        <ToggleSwitch value={alerts.tg_enable} onChange={(v) => setAlerts({ ...alerts, tg_enable: v })} />
+                    </div>
                 </div>
-                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <InputField label="Telegram Bot Token" value={alerts.tg_bot_token} onChange={(v) => setAlerts({ ...alerts, tg_bot_token: v })} placeholder="可留空使用默认预设" />
-                    <InputField label="Telegram Chat ID" value={alerts.tg_chat_id} onChange={(v) => setAlerts({ ...alerts, tg_chat_id: v })} placeholder="默认接收告警的 Chat ID" />
-                </div>
+                {alerts.tg_enable && (
+                    <div className="p-6 space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <InputField label="Telegram Bot Token" value={alerts.tg_bot_token} onChange={(v) => setAlerts({ ...alerts, tg_bot_token: v })} placeholder="可留空使用内置预设 Token" />
+                            <InputField label="Telegram Chat ID" value={alerts.tg_chat_id} onChange={(v) => setAlerts({ ...alerts, tg_chat_id: v })} placeholder="接收通知的 Chat ID (默认 7876790495)" />
+                        </div>
+                        <div className="flex items-center justify-between pt-2">
+                            <div className="text-xs text-gray-400">
+                                💡 遇到打卡/名片赞被腾讯风控、API 异常时，将自动通过 Telegram Bot 发送报警详情。
+                            </div>
+                            <button
+                                type="button"
+                                disabled={testingTg}
+                                onClick={async () => {
+                                    setTestingTg(true)
+                                    try {
+                                        const res = await noAuthFetch<{ message?: string }>('/test-tg', {
+                                            method: 'POST',
+                                            body: JSON.stringify({
+                                                bot_token: alerts.tg_bot_token,
+                                                chat_id: alerts.tg_chat_id,
+                                            }),
+                                        })
+                                        if (res.code === 0) {
+                                            showToast(res.message || '测试消息已成功发送至 Telegram！', 'success')
+                                        } else {
+                                            showToast(res.message || '测试发送失败，请检查 Token / ID', 'error')
+                                        }
+                                    } catch {
+                                        showToast('请求超时或网络异常', 'error')
+                                    } finally {
+                                        setTestingTg(false)
+                                    }
+                                }}
+                                className="px-4 py-2 text-xs font-medium rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                            >
+                                {testingTg ? '正在测试...' : '📨 发送测试消息'}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* 自定义任务 */}

@@ -32,6 +32,7 @@ export interface PluginConfig {
     friendSpark_time: string
     friendSpark_message: string
     friendSpark_targets: string
+    tg_enable: boolean
     tg_bot_token: string
     tg_chat_id: string
     tasks: TaskConfig[]

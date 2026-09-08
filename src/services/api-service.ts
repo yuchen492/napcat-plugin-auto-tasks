@@ -6,6 +6,7 @@ import type {
     NapCatPluginContext,
 } from 'napcat-types/napcat-onebot/network/plugin/types';
 import { pluginState } from '../core/state';
+import { sendTelegramAlert } from '../taskManager';
 import type { PluginConfig, TaskConfig } from '../types';
 
 export function registerApiRoutes(ctx: NapCatPluginContext): void {
@@ -76,6 +77,7 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
                     },
                 },
                 alerts: {
+                    tg_enable: pluginState.config.tg_enable !== false,
                     tg_bot_token: pluginState.config.tg_bot_token,
                     tg_chat_id: pluginState.config.tg_chat_id,
                 },
@@ -126,6 +128,7 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
 
             if (body.alerts && typeof body.alerts === 'object') {
                 const al = body.alerts as Record<string, unknown>;
+                if (typeof al.tg_enable === 'boolean') updates.tg_enable = al.tg_enable;
                 if (typeof al.tg_bot_token === 'string') updates.tg_bot_token = al.tg_bot_token;
                 if (typeof al.tg_chat_id === 'string') updates.tg_chat_id = al.tg_chat_id;
             }
@@ -207,6 +210,34 @@ export function registerApiRoutes(ctx: NapCatPluginContext): void {
             res.json({ code: 0, message: 'ok' });
         } catch (err) {
             ctx.logger.error('批量更新群配置失败:', err);
+            res.status(500).json({ code: -1, message: String(err) });
+        }
+    });
+
+    /** 测试发送 Telegram 消息 */
+    router.postNoAuth('/test-tg', async (req, res) => {
+        try {
+            const body = req.body as Record<string, unknown> | undefined;
+            const botToken = (body?.bot_token as string) || pluginState.config.tg_bot_token;
+            const chatId = (body?.chat_id as string) || pluginState.config.tg_chat_id;
+
+            if (!botToken || !chatId) {
+                return res.status(400).json({ code: -1, message: '请提供有效的 Bot Token 和 Chat ID' });
+            }
+
+            const testMsg = `🔔 *[NapCat 自动任务] Telegram 通知连通性测试*\n\n` +
+                `这是一条来自 NapCat 自动任务 Pro 插件的测试消息！\n` +
+                `*发送时间:* ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}\n` +
+                `*状态:* 连通成功，TG 消息交互正常 🐾`;
+
+            const result = await sendTelegramAlert(botToken, chatId, testMsg);
+            if (result.success) {
+                res.json({ code: 0, message: '测试消息发送成功！请前往 Telegram 查看。' });
+            } else {
+                res.json({ code: -1, message: `发送失败: ${result.error || '未知错误'}` });
+            }
+        } catch (err) {
+            ctx.logger.error('测试 TG 消息失败:', err);
             res.status(500).json({ code: -1, message: String(err) });
         }
     });
