@@ -113,8 +113,8 @@ export default function TasksPage() {
                         onToggle={(v) => setBuiltin({ ...builtin, groupSign: { ...builtin.groupSign, enable: v } })}
                     >
                         <InputField label="执行时间" value={builtin.groupSign.time} onChange={(v) => setBuiltin({ ...builtin, groupSign: { ...builtin.groupSign, time: v } })} placeholder="08:00:00" />
-                        <InputField label="打卡目标群" value={builtin.groupSign.targets} onChange={(v) => setBuiltin({ ...builtin, groupSign: { ...builtin.groupSign, targets: v } })} placeholder="all 或逗号分隔群号" />
-                        <InputField label="黑名单/排除群" value={builtin.groupSign.exclude || ''} onChange={(v) => setBuiltin({ ...builtin, groupSign: { ...builtin.groupSign, exclude: v } })} placeholder="要排除的群号(逗号分隔)" />
+                        <InputField label="打卡目标群" value={builtin.groupSign.targets} onChange={(v) => setBuiltin({ ...builtin, groupSign: { ...builtin.groupSign, targets: v } })} placeholder="all (遵循群管理) 或逗号分隔群号" />
+                        <InputField label="黑名单/排除群" value={builtin.groupSign.exclude || ''} onChange={(v) => setBuiltin({ ...builtin, groupSign: { ...builtin.groupSign, exclude: v } })} placeholder="额外排除的群号(逗号分隔)" />
                     </BuiltinTaskCard>
 
                     {/* 好友名片赞 */}

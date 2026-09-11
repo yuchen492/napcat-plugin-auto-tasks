@@ -166,22 +166,25 @@ export class TaskManager {
             return allFriends;
         };
 
-        // 内置任务 - 群打卡 (带黑名单过滤与日志)
+        // 内置任务 - 群打卡 (自动遵循群管理白名单 + 黑名单过滤 + 增强日志)
         if (config.groupSign_enable && timeStr === config.groupSign_time) {
             let targetGroupIds: number[] = [];
-            if (config.groupSign_targets.toLowerCase() === 'all') {
-                targetGroupIds = await getAllGroups();
-            } else if (config.groupSign_targets.toLowerCase() === 'allallow') {
+            const targetsLower = config.groupSign_targets.trim().toLowerCase();
+
+            if (targetsLower === 'all' || targetsLower === 'allallow') {
+                // 只要在群管理页面中被禁用（enabled: false），不管是 all 还是 allAllow 都严格排除
                 targetGroupIds = await getEnabledGroups();
             } else {
-                targetGroupIds = config.groupSign_targets.split(/[,，]/).map(t => parseInt(t.trim(), 10)).filter(t => !isNaN(t));
+                // 指定具体群号列表时，依然受群管理总开关约束
+                const rawGids = config.groupSign_targets.split(/[,，]/).map(t => parseInt(t.trim(), 10)).filter(t => !isNaN(t));
+                targetGroupIds = rawGids.filter(gid => pluginState.isGroupEnabled(String(gid)));
             }
 
-            // 过滤排除黑名单
+            // 过滤排除独立黑名单
             const excludeList = (config.groupSign_exclude || '').split(/[,，]/).map(t => t.trim()).filter(t => t);
             const filteredGroups = targetGroupIds.filter(gid => !excludeList.includes(String(gid)));
 
-            pluginState.logger.info(`[内置任务] 群打卡启动: 总计 ${filteredGroups.length} 个群 (已排除 ${excludeList.length} 个黑名单)`);
+            pluginState.logger.info(`[内置任务] 群打卡启动: 候选目标 ${filteredGroups.length} 个群 (已自动应用群管理禁用与黑名单过滤)`);
 
             this.executeGroupSignBatch(filteredGroups, config.tg_bot_token, config.tg_chat_id);
         }
@@ -205,11 +208,9 @@ export class TaskManager {
 
         // 内置任务 - 群续火花
         if (config.groupSpark_enable && timeStr === config.groupSpark_time) {
-            const targets = config.groupSpark_targets.toLowerCase() === 'all'
-                ? (await getAllGroups()).join(',')
-                : config.groupSpark_targets.toLowerCase() === 'allallow'
+            const targets = config.groupSpark_targets.toLowerCase() === 'all' || config.groupSpark_targets.toLowerCase() === 'allallow'
                 ? (await getEnabledGroups()).join(',')
-                : config.groupSpark_targets;
+                : config.groupSpark_targets.split(/[,，]/).filter(gid => pluginState.isGroupEnabled(gid.trim())).join(',');
             this.executeBatch('群火花', targets, async (id) => {
                 await pluginState.callApi('send_msg', {
                     message_type: 'group', group_id: id, message: config.groupSpark_message,
@@ -252,11 +253,13 @@ export class TaskManager {
         const failedGroups: { group_id: number; error: string }[] = [];
 
         for (const gid of groups) {
-            await new Promise(r => setTimeout(r, 400)); // 防风控 400ms 延时
+            await new Promise(r => setTimeout(r, 600)); // 适度延时至 600ms 防止腾讯高频风控拦截
             try {
-                await pluginState.callApi('send_group_sign', { group_id: gid });
+                // NapCat OneBot11 支持 set_group_sign 和 send_group_sign，此处同时保证参数兼容
+                await pluginState.callApi('set_group_sign', { group_id: String(gid) });
                 successCount++;
                 pluginState.incrementProcessed();
+                pluginState.logger.info(`[群打卡] 群 ${gid} 打卡成功`);
             } catch (e: any) {
                 failCount++;
                 failedGroups.push({ group_id: gid, error: e?.message || String(e) });
@@ -320,6 +323,12 @@ export class TaskManager {
 
     private async executeTask(task: TaskConfig, index: number) {
         try {
+            // 群相关任务受群管理启用/禁用开关控制
+            if ((task.type === 'group' || task.type === 'group_notice') && !pluginState.isGroupEnabled(String(task.target))) {
+                pluginState.logger.info(`[任务${index}] ⏸️ 群 ${task.target} 在群管理中已被禁用，跳过执行`);
+                return;
+            }
+
             pluginState.logger.info(`[任务${index}] ▶️ 触发: ${task.target} (${task.type})`);
             await new Promise(r => setTimeout(r, Math.random() * 3000));
 
